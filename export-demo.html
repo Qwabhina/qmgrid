@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMGrid - Export Demo</title>
+    <link rel="stylesheet" href="qmgrid.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .demo-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .demo-content {
+            padding: 20px;
+        }
+        
+        .export-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.15s ease;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        
+        .export-options {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .option-group {
+            margin-bottom: 10px;
+        }
+        
+        .option-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 20px;
+            font-size: 14px;
+        }
+        
+        .option-group input[type="checkbox"],
+        .option-group input[type="radio"] {
+            margin: 0;
+        }
+        
+        .option-group select,
+        .option-group input[type="text"] {
+            padding: 4px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QMGrid - Export Functionality Demo</h1>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Export Options Configuration
+            </div>
+            <div class="demo-content">
+                <div class="export-options">
+                    <div class="option-group">
+                        <strong>Data Selection:</strong>
+                        <label><input type="radio" name="dataSelection" value="all" checked> All Data</label>
+                        <label><input type="radio" name="dataSelection" value="visible"> Visible Only</label>
+                        <label><input type="radio" name="dataSelection" value="selected"> Selected Only</label>
+                    </div>
+                    
+                    <div class="option-group">
+                        <strong>Options:</strong>
+                        <label><input type="checkbox" id="includeHeaders" checked> Include Headers</label>
+                        <label>Filename: <input type="text" id="filename" value="employee-export" placeholder="filename"></label>
+                    </div>
+                    
+                    <div class="option-group">
+                        <strong>Date Format:</strong>
+                        <select id="dateFormat">
+                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        </select>
+                        
+                        <strong>CSV Separator:</strong>
+                        <select id="csvSeparator">
+                            <option value=",">Comma (,)</option>
+                            <option value=";">Semicolon (;)</option>
+                            <option value="\t">Tab</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <strong>PDF Options:</strong>
+                        <select id="pdfOrientation">
+                            <option value="portrait">Portrait</option>
+                            <option value="landscape">Landscape</option>
+                        </select>
+                        <select id="pdfPageSize">
+                            <option value="A4">A4</option>
+                            <option value="A3">A3</option>
+                            <option value="letter">Letter</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="export-controls">
+                    <button class="btn btn-success" onclick="customExport('csv')">📄 Export CSV</button>
+                    <button class="btn btn-info" onclick="customExport('excel')">📊 Export Excel</button>
+                    <button class="btn btn-warning" onclick="customExport('pdf')">📋 Export PDF</button>
+                    <button class="btn btn-primary" onclick="customExport('print')">🖨️ Print Table</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Employee Data Table with Export Features
+            </div>
+            <div class="demo-content">
+                <div id="export-table"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Export Event Log
+            </div>
+            <div class="demo-content">
+                <div id="event-log" style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                    <em>Export events will appear here...</em>
+                </div>
+                <button class="btn btn-secondary" onclick="clearLog()" style="margin-top: 10px;">Clear Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="qmgrid.js"></script>
+    <script>
+        // Sample employee data
+        const employeeData = [
+            { id: 1, name: 'John Doe', email: 'john.doe@company.com', age: 28, salary: 75000, department: 'Engineering', status: 'active', joinDate: '2022-01-15', performance: 4.5 },
+            { id: 2, name: 'Jane Smith', email: 'jane.smith@company.com', age: 32, salary: 85000, department: 'Marketing', status: 'active', joinDate: '2021-03-22', performance: 4.8 },
+            { id: 3, name: 'Bob Johnson', email: 'bob.johnson@company.com', age: 45, salary: 95000, department: 'Sales', status: 'inactive', joinDate: '2020-07-10', performance: 4.2 },
+            { id: 4, name: 'Alice Brown', email: 'alice.brown@company.com', age: 29, salary: 70000, department: 'HR', status: 'active', joinDate: '2022-05-18', performance: 4.6 },
+            { id: 5, name: 'Charlie Wilson', email: 'charlie.wilson@company.com', age: 35, salary: 80000, department: 'Engineering', status: 'pending', joinDate: '2021-11-30', performance: 4.3 },
+            { id: 6, name: 'Diana Davis', email: 'diana.davis@company.com', age: 27, salary: 72000, department: 'Design', status: 'active', joinDate: '2023-02-14', performance: 4.7 },
+            { id: 7, name: 'Edward Miller', email: 'edward.miller@company.com', age: 41, salary: 90000, department: 'Management', status: 'active', joinDate: '2019-09-05', performance: 4.4 },
+            { id: 8, name: 'Fiona Garcia', email: 'fiona.garcia@company.com', age: 33, salary: 78000, department: 'Marketing', status: 'inactive', joinDate: '2021-12-08', performance: 4.1 },
+            { id: 9, name: 'George Martinez', email: 'george.martinez@company.com', age: 38, salary: 82000, department: 'Sales', status: 'active', joinDate: '2020-04-25', performance: 4.5 },
+            { id: 10, name: 'Helen Rodriguez', email: 'helen.rodriguez@company.com', age: 26, salary: 68000, department: 'Support', status: 'pending', joinDate: '2023-01-12', performance: 4.2 },
+            { id: 11, name: 'Ian Thompson', email: 'ian.thompson@company.com', age: 31, salary: 76000, department: 'Engineering', status: 'active', joinDate: '2022-08-20', performance: 4.6 },
+            { id: 12, name: 'Julia Anderson', email: 'julia.anderson@company.com', age: 29, salary: 74000, department: 'Design', status: 'active', joinDate: '2022-10-03', performance: 4.8 }
+        ];
+
+        // Initialize the table
+        const table = new QMGrid('#export-table', {
+            data: employeeData,
+            columns: [
+                { key: 'id', title: 'ID', width: '60px' },
+                { key: 'name', title: 'Name' },
+                { key: 'email', title: 'Email' },
+                { key: 'age', title: 'Age', width: '80px' },
+                { key: 'salary', title: 'Salary', type: 'currency' },
+                { key: 'department', title: 'Department' },
+                { 
+                    key: 'status', 
+                    title: 'Status',
+                    render: (value) => {
+                        const colors = { active: '#28a745', inactive: '#dc3545', pending: '#ffc107' };
+                        const color = colors[value] || '#6c757d';
+                        return `<span style="color: ${color}; font-weight: bold; padding: 2px 6px; border-radius: 3px; background: ${color}20;">${value.toUpperCase()}</span>`;
+                    }
+                },
+                { key: 'joinDate', title: 'Join Date', type: 'date' },
+                { 
+                    key: 'performance', 
+                    title: 'Performance',
+                    render: (value) => {
+                        const stars = '★'.repeat(Math.floor(value)) + '☆'.repeat(5 - Math.floor(value));
+                        return `<span title="${value}/5">${stars}</span>`;
+                    }
+                }
+            ],
+            pagination: true,
+            pageSize: 5,
+            sortable: true,
+            searchable: true,
+            selectable: true,
+            multiSelect: true,
+            exportable: true,
+            exportOptions: {
+                filename: 'employee-data',
+                includeHeaders: true,
+                dateFormat: 'MM/DD/YYYY'
+            }
+        });
+
+        // Event logging
+        const eventLog = document.getElementById('event-log');
+        
+        function logEvent(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>${timestamp}:</strong> ${message}`;
+            eventLog.appendChild(logEntry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        // Listen to export events
+        table.on('export', (data) => {
+            logEvent(`Exported ${data.data.length} rows as ${data.format.toUpperCase()} with filename "${data.options.filename}"`);
+        });
+
+        table.on('rowSelect', (data) => {
+            logEvent(`Row ${data.selected ? 'selected' : 'deselected'} at index ${data.index}. Total selected: ${data.selectedRows.length}`);
+        });
+
+        // Custom export function
+        function customExport(format) {
+            const dataSelection = document.querySelector('input[name="dataSelection"]:checked').value;
+            const includeHeaders = document.getElementById('includeHeaders').checked;
+            const filename = document.getElementById('filename').value || 'export';
+            const dateFormat = document.getElementById('dateFormat').value;
+            const csvSeparator = document.getElementById('csvSeparator').value;
+            const pdfOrientation = document.getElementById('pdfOrientation').value;
+            const pdfPageSize = document.getElementById('pdfPageSize').value;
+
+            const options = {
+                filename: filename,
+                includeHeaders: includeHeaders,
+                selectedOnly: dataSelection === 'selected',
+                visibleOnly: dataSelection === 'visible',
+                dateFormat: dateFormat,
+                csvSeparator: csvSeparator,
+                pdfOrientation: pdfOrientation,
+                pdfPageSize: pdfPageSize
+            };
+
+            // Validate selection if needed
+            if (dataSelection === 'selected' && table.getSelectedRows().length === 0) {
+                alert('Please select some rows first!');
+                return;
+            }
+
+            table.exportData(format, options);
+        }
+
+        function clearLog() {
+            eventLog.innerHTML = '<em>Export events will appear here...</em>';
+        }
+
+        // Initial log
+        logEvent('Table initialized with export functionality');
+    </script>
+</body>
+</html>

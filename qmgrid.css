@@ -1,0 +1,683 @@
+/**
+ * QMGrid CSS Styles
+ * 
+ * @fileoverview Complete styling for QMGrid data table component
+ * @author Qwabhina McFynn
+ * @version 1.2.0
+ * @license MIT
+ */
+
+.qmgrid-container {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    color: #333;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Header Controls */
+.qmgrid-header {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.qmgrid-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.qmgrid-length label,
+.qmgrid-search label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.page-size-select,
+.search-input {
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.page-size-select:focus,
+.search-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.search-input {
+    min-width: 200px;
+}
+
+/* Table Wrapper */
+.qmgrid-wrapper {
+    position: relative;
+    overflow-x: auto;
+}
+
+/* Table Styles */
+.qmgrid-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    background: #fff;
+}
+
+.qmgrid-table.table-striped tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.qmgrid-table.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.qmgrid-table.table-bordered th,
+.qmgrid-table.table-bordered td {
+    border: 1px solid #dee2e6;
+}
+
+.qmgrid-table.table-hover tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+.qmgrid-table.table-responsive {
+    min-width: 100%;
+}
+
+/* Header Styles */
+.qmgrid-head {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.qmgrid-header-cell {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+}
+
+.qmgrid-header-cell.sortable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.qmgrid-header-cell.sortable:hover {
+    background-color: #e9ecef;
+}
+
+.qmgrid-header-cell.sortable:focus {
+    outline: 2px solid #007bff;
+    outline-offset: -2px;
+}
+
+.column-title {
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.sort-indicator {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: middle;
+    opacity: 0.3;
+    transition: opacity 0.15s ease;
+}
+
+.sort-indicator::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 6px solid #6c757d;
+    top: 50%;
+    margin-top: -8px;
+    margin-left: -4px;
+}
+
+.sort-indicator::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #6c757d;
+    top: 50%;
+    margin-top: 2px;
+    margin-left: -4px;
+}
+
+.qmgrid-header-cell.sort-asc .sort-indicator::before {
+    border-bottom-color: #007bff;
+    opacity: 1;
+}
+
+.qmgrid-header-cell.sort-desc .sort-indicator::after {
+    border-top-color: #007bff;
+    opacity: 1;
+}
+
+/* Body Styles */
+.qmgrid-body {
+    background: #fff;
+}
+
+.qmgrid-row {
+    transition: background-color 0.15s ease;
+}
+
+.qmgrid-row.selected {
+    background-color: #e3f2fd !important;
+}
+
+.qmgrid-cell {
+    padding: 12px 16px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Selection Styles */
+.select-column {
+    width: 40px;
+    text-align: center;
+}
+
+.row-select-checkbox,
+.select-all-checkbox {
+    cursor: pointer;
+}
+
+/* Loading and Empty States */
+.qmgrid-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.qmgrid-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Footer Styles */
+.qmgrid-footer {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.qmgrid-info {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.qmgrid-pagination {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Pagination Styles */
+.page-btn {
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s ease;
+    min-width: 40px;
+    text-align: center;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.page-btn:disabled {
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.page-btn.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.page-ellipsis {
+    padding: 6px 4px;
+    color: #6c757d;
+}
+
+/* Export Functionality */
+.qmgrid-export {
+    position: relative;
+}
+
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: #fff;
+    color: #495057;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.export-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.export-btn:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.export-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.export-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 150px;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    margin-top: 2px;
+}
+
+.export-menu.show {
+    display: flex;
+}
+
+.export-option {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: background-color 0.15s ease;
+}
+
+.export-option:hover {
+    background: #f8f9fa;
+}
+
+.export-option:focus {
+    outline: none;
+    background: #e9ecef;
+}
+
+.export-option:first-child {
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.export-option:last-child {
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .qmgrid-container {
+        background: #2d3748;
+        color: #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .qmgrid-header,
+    .qmgrid-footer {
+        background: #4a5568;
+        border-color: #718096;
+    }
+    
+    .qmgrid-head {
+        background: #4a5568;
+        border-color: #718096;
+    }
+    
+    .qmgrid-header-cell {
+        color: #e2e8f0;
+    }
+    
+    .qmgrid-header-cell.sortable:hover {
+        background: #718096;
+    }
+    
+    .qmgrid-table {
+        background: #2d3748;
+    }
+    
+    .qmgrid-table.table-striped tbody tr:nth-child(even) {
+        background-color: #4a5568;
+    }
+    
+    .qmgrid-table.table-hover tbody tr:hover {
+        background-color: #718096;
+    }
+    
+    .qmgrid-cell {
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
+    .page-size-select,
+    .search-input {
+        background: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
+    .page-btn {
+        background: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
+    .page-btn:hover:not(:disabled) {
+        background: #718096;
+    }
+    
+    .export-btn {
+        background: #4a5568;
+        color: #e2e8f0;
+        border-color: #718096;
+    }
+    
+    .export-btn:hover {
+        background: #718096;
+        border-color: #a0aec0;
+    }
+    
+    .export-menu {
+        background: #4a5568;
+        border-color: #718096;
+    }
+    
+    .export-option {
+        color: #e2e8f0;
+    }
+    
+    .export-option:hover {
+        background: #718096;
+    }
+    
+    .export-option:focus {
+        background: #a0aec0;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .qmgrid-container {
+        border: 2px solid #000;
+    }
+    
+    .qmgrid-head th {
+        border: 1px solid #000;
+        background: #fff;
+        color: #000;
+    }
+    
+    .qmgrid-table td {
+        border: 1px solid #000;
+    }
+    
+    .qmgrid-table.table-hover tbody tr:hover {
+        background-color: #000;
+        color: #fff;
+    }
+    
+    .page-size-select:focus,
+    .search-input:focus {
+        outline: 3px solid #000;
+        border-color: #000;
+    }
+    
+    .qmgrid-header-cell.sortable:focus {
+        outline: 3px solid #000;
+    }
+    
+    .export-btn {
+        border: 2px solid #000;
+        background: #fff;
+        color: #000;
+    }
+    
+    .export-btn:focus {
+        outline: 3px solid #000;
+        border-color: #000;
+    }
+    
+    .export-menu {
+        border: 2px solid #000;
+        background: #fff;
+    }
+    
+    .export-option {
+        color: #000;
+        border-bottom: 1px solid #000;
+    }
+    
+    .export-option:last-child {
+        border-bottom: none;
+    }
+    
+    .export-option:hover,
+    .export-option:focus {
+        background: #000;
+        color: #fff;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .qmgrid-header-cell.sortable,
+    .page-size-select,
+    .search-input,
+    .page-btn {
+        transition: none;
+    }
+    
+    .loading-spinner {
+        animation: none;
+    }
+}
+
+/* Focus Visible Support */
+.qmgrid-header-cell.sortable:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.page-btn:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .qmgrid-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .qmgrid-export {
+        order: -1;
+        margin-bottom: 10px;
+    }
+    
+    .export-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .export-menu {
+        right: 0;
+        left: 0;
+        min-width: auto;
+    }
+    
+    .qmgrid-footer {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .qmgrid-pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .qmgrid-container {
+        border-radius: 0;
+        margin: 0 -10px;
+    }
+    
+    .qmgrid-header,
+    .qmgrid-footer {
+        padding: 12px 16px;
+    }
+    
+    .qmgrid-header-cell,
+    .qmgrid-cell {
+        padding: 8px 12px;
+    }
+    
+    .page-btn {
+        padding: 4px 8px;
+        min-width: 32px;
+        font-size: 12px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .qmgrid-header,
+    .qmgrid-footer,
+    .export-dropdown {
+        display: none !important;
+    }
+    
+    .qmgrid-wrapper {
+        overflow: visible !important;
+    }
+    
+    .qmgrid-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    .qmgrid-table th,
+    .qmgrid-table td {
+        border: 1px solid #000 !important;
+        padding: 4px !important;
+        font-size: 10px !important;
+    }
+    
+    .qmgrid-table th {
+        background: #f0f0f0 !important;
+        font-weight: bold !important;
+    }
+}
