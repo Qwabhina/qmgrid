@@ -171,7 +171,7 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                         <div class="config-group">
                             <label for="serverUrl">Server URL:</label>
-                            <input type="text" id="serverUrl" value="/api/employees" placeholder="Enter API endpoint">
+                            <input type="text" id="serverUrl" value="/api/users" placeholder="Enter API endpoint">
                         </div>
                         <div class="config-group">
                             <label for="requestMethod">HTTP Method:</label>
@@ -245,13 +245,16 @@
       "id": 1,
       "name": "John Doe",
       "email": "john@example.com",
+      "phone": "+1-555-0123",
+      "age": 28,
+      "city": "New York",
       "department": "Engineering",
       "salary": 75000,
       "status": "active"
     }
     // ... more records
   ],
-  "total": 1250,
+  "total": 208,
   "draw": 1,
   "error": null
 }</code></pre>
@@ -265,6 +268,9 @@
   "sortDir": "asc",
   "draw": 1
 }</code></pre>
+
+                <h4>DummyJSON API Integration:</h4>
+                <p>This demo uses the real <a href="https://dummyjson.com/users" target="_blank">DummyJSON Users API</a> to demonstrate server-side processing with actual HTTP requests. The API provides 208 real user records with pagination and search capabilities.</p>
             </div>
         </div>
     </div>
@@ -272,56 +278,71 @@
     <script src="qmgrid.js"></script>
     <script>
         let serverTable = null;
-        let mockData = [];
         let requestCount = 0;
 
-        // Generate mock data
-        function generateMockData() {
-            const names = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson', 'Diana Davis', 'Edward Miller', 'Fiona Garcia', 'George Martinez', 'Helen Rodriguez'];
-            const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Design', 'Support', 'Management', 'Finance'];
-            const statuses = ['active', 'inactive', 'pending'];
-            
-            mockData = [];
-            for (let i = 1; i <= 1000; i++) {
-                mockData.push({
-                    id: i,
-                    name: names[Math.floor(Math.random() * names.length)] + ' ' + i,
-                    email: `user${i}@example.com`,
-                    department: departments[Math.floor(Math.random() * departments.length)],
-                    salary: Math.floor(Math.random() * 100000) + 40000,
-                    status: statuses[Math.floor(Math.random() * statuses.length)],
-                    joinDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString().split('T')[0]
-                });
-            }
+        // DummyJSON API configuration
+        const DUMMYJSON_API = {
+            baseUrl: 'https://dummyjson.com/users',
+            totalUsers: 208 // DummyJSON has 208 users total
+        };
+
+        // Transform DummyJSON user data to our table format
+        function transformDummyJsonUser(user) {
+            return {
+                id: user.id,
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+                department: user.company?.department || 'Unknown',
+                salary: Math.floor(Math.random() * 100000) + 40000, // Random salary since DummyJSON doesn't have this
+                status: ['active', 'inactive', 'pending'][Math.floor(Math.random() * 3)],
+                joinDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString().split('T')[0],
+                phone: user.phone,
+                age: user.age,
+                city: user.address?.city || 'Unknown'
+            };
         }
 
-        // Mock server endpoint
-        function mockServerRequest(params) {
-            return new Promise((resolve, reject) => {
-                // Simulate network delay
-                const delay = params.slow ? 3000 : Math.random() * 500 + 200;
-                
-                setTimeout(() => {
+        // Real API request to DummyJSON
+        function makeRealApiRequest(params) {
+            return new Promise(async (resolve, reject) => {
+                try {
                     if (params.error) {
                         reject(new Error('Simulated server error'));
                         return;
                     }
 
-                    let filteredData = [...mockData];
+                    // Add artificial delay for slow response simulation
+                    if (params.slow) {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
+
+                    // Calculate skip and limit for DummyJSON API
+                    const skip = (params.page - 1) * params.pageSize;
+                    const limit = params.pageSize;
                     
-                    // Apply search filter
+                    // Build DummyJSON API URL
+                    let apiUrl = `${DUMMYJSON_API.baseUrl}?limit=${limit}&skip=${skip}`;
+                    
+                    // Add search if provided
                     if (params.search) {
-                        const searchTerm = params.search.toLowerCase();
-                        filteredData = filteredData.filter(row => 
-                            Object.values(row).some(value => 
-                                value && value.toString().toLowerCase().includes(searchTerm)
-                            )
-                        );
+                        apiUrl = `${DUMMYJSON_API.baseUrl}/search?q=${encodeURIComponent(params.search)}&limit=${limit}&skip=${skip}`;
+                    }
+
+                    logEvent('API_CALL', `Calling DummyJSON API: ${apiUrl}`);
+                    
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     
-                    // Apply sorting
-                    if (params.sortBy) {
-                        filteredData.sort((a, b) => {
+                    const data = await response.json();
+                    
+                    // Transform users to our format
+                    let transformedUsers = data.users.map(transformDummyJsonUser);
+                    
+                    // Apply client-side sorting since DummyJSON doesn't support custom sorting
+                    if (params.sortBy && params.sortBy !== 'id') {
+                        transformedUsers.sort((a, b) => {
                             const aVal = a[params.sortBy];
                             const bVal = b[params.sortBy];
                             
@@ -333,27 +354,29 @@
                         });
                     }
                     
-                    // Apply pagination
-                    const start = (params.page - 1) * params.pageSize;
-                    const end = start + params.pageSize;
-                    const pageData = filteredData.slice(start, end);
+                    // For search, use the actual total from API, otherwise use known total
+                    const totalRecords = params.search ? data.total : DUMMYJSON_API.totalUsers;
                     
                     resolve({
-                        data: pageData,
-                        total: filteredData.length,
+                        data: transformedUsers,
+                        total: totalRecords,
                         draw: params.draw,
                         error: null
                     });
-                }, delay);
+                    
+                } catch (error) {
+                    logEvent('API_ERROR', `DummyJSON API error: ${error.message}`);
+                    reject(error);
+                }
             });
         }
 
         // Override fetch for demo purposes
         const originalFetch = window.fetch;
         window.fetch = function(url, options) {
-            if (url.includes('/api/employees')) {
+            if (url.includes('/api/employees') || url.includes('/api/users')) {
                 requestCount++;
-                logEvent('REQUEST', `Sending request #${requestCount} to ${url}`);
+                logEvent('REQUEST', `Intercepting request #${requestCount} to ${url}`);
                 
                 let params;
                 if (options && options.method === 'POST') {
@@ -365,7 +388,7 @@
                     params.pageSize = parseInt(params.pageSize) || 10;
                 }
                 
-                return mockServerRequest(params)
+                return makeRealApiRequest(params)
                     .then(data => {
                         logEvent('SUCCESS', `Received ${data.data.length} records (${data.total} total)`);
                         return {
@@ -379,7 +402,12 @@
                             ok: false,
                             status: 500,
                             statusText: error.message,
-                            json: () => Promise.resolve({ error: error.message })
+                            json: () => Promise.resolve({ 
+                                data: [], 
+                                total: 0, 
+                                draw: params.draw || 1, 
+                                error: error.message 
+                            })
                         };
                     });
             }
@@ -398,7 +426,7 @@
             }
             
             updateStatus('loading', 'Initializing...');
-            logEvent('INIT', 'Initializing server-side table');
+            logEvent('INIT', 'Initializing server-side table with DummyJSON API');
             
             try {
                 serverTable = new QMGrid('#server-table', {
@@ -406,6 +434,9 @@
                         { key: 'id', title: 'ID', width: '60px' },
                         { key: 'name', title: 'Name' },
                         { key: 'email', title: 'Email' },
+                        { key: 'phone', title: 'Phone' },
+                        { key: 'age', title: 'Age', width: '80px' },
+                        { key: 'city', title: 'City' },
                         { key: 'department', title: 'Department' },
                         { key: 'salary', title: 'Salary', type: 'currency' },
                         { 
@@ -425,7 +456,7 @@
                         method: method,
                         timeout: timeout,
                         headers: {
-                            'Authorization': 'Bearer demo-token',
+                            'Content-Type': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         data: function(params) {
@@ -439,7 +470,7 @@
                             };
                         },
                         beforeSend: function(data, params) {
-                            logEvent('BEFORE_SEND', `Preparing request for page ${params.page}`);
+                            logEvent('BEFORE_SEND', `Preparing request for page ${params.page} (${params.pageSize} items)`);
                             return true;
                         },
                         complete: function() {
@@ -474,6 +505,12 @@
                 serverTable.on('serverDataLoaded', (data) => {
                     updateStatus('connected', 'Connected');
                     logEvent('DATA_LOADED', `Loaded ${data.data.length} records of ${data.total} total`);
+                    logEvent('DEBUG', `Current page: ${data.page}, Total records: ${data.total}, Page size: ${serverTable.config.pageSize}`);
+                    
+                    // Additional debugging for pagination issues
+                    const expectedStart = (data.page - 1) * serverTable.config.pageSize + 1;
+                    const expectedEnd = Math.min(data.page * serverTable.config.pageSize, data.total);
+                    logEvent('DEBUG', `Expected records ${expectedStart}-${expectedEnd}, Got ${data.data.length} records`);
                 });
 
                 serverTable.on('serverError', (data) => {
@@ -491,6 +528,20 @@
 
                 serverTable.on('pageChange', (data) => {
                     logEvent('PAGE_CHANGE', `Navigate to page ${data.page}`);
+                });
+
+                // Add debugging for pagination clicks
+                serverTable.container.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('page-number')) {
+                        const page = parseInt(e.target.dataset.page);
+                        const totalPages = Math.ceil(serverTable.totalRecords / serverTable.config.pageSize);
+                        logEvent('DEBUG', `Page button clicked: ${page}, Total pages: ${totalPages}, Total records: ${serverTable.totalRecords}`);
+                        
+                        // Additional debugging
+                        logEvent('DEBUG', `Button classes: ${e.target.className}, Dataset: ${JSON.stringify(e.target.dataset)}`);
+                    } else if (e.target.closest('.qmgrid-pagination')) {
+                        logEvent('DEBUG', `Pagination area clicked: ${e.target.className}, Tag: ${e.target.tagName}`);
+                    }
                 });
 
                 logEvent('SUCCESS', 'Table initialized successfully');
@@ -572,9 +623,9 @@
             logEl.innerHTML = '<div class="log-entry"><span class="log-timestamp">[Cleared]</span> <span class="log-event">Event log cleared</span></div>';
         }
 
-        // Initialize mock data
-        generateMockData();
-        logEvent('INIT', `Generated ${mockData.length} mock records for demo`);
+        // Initialize with DummyJSON info
+        logEvent('INIT', `Demo initialized with DummyJSON Users API (${DUMMYJSON_API.totalUsers} total users)`);
+        logEvent('INFO', 'Configure server settings and click "Initialize Table" to start');
     </script>
 </body>
 </html>

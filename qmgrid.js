@@ -502,9 +502,28 @@ class QMGrid {
 
         emptyDiv.style.display = 'none';
         
-        const startIndex = this.config.pagination ? (this.currentPage - 1) * this.config.pageSize : 0;
-        const endIndex = this.config.pagination ? startIndex + this.config.pageSize : this.filteredData.length;
-        const pageData = this.filteredData.slice(startIndex, endIndex);
+        // For server-side processing, filteredData already contains the correct page data
+        // For client-side processing, we need to slice the data for pagination
+        let pageData;
+        let startIndex;
+        
+        if (this.config.serverSide) {
+            // Server already sent the correct page data
+            pageData = this.filteredData;
+            startIndex = (this.currentPage - 1) * this.config.pageSize;
+            console.log('Server-side renderBody:', {
+                currentPage: this.currentPage,
+                pageSize: this.config.pageSize,
+                filteredDataLength: this.filteredData.length,
+                startIndex: startIndex,
+                pageDataLength: pageData.length
+            });
+        } else {
+            // Client-side pagination - slice the data
+            startIndex = this.config.pagination ? (this.currentPage - 1) * this.config.pageSize : 0;
+            const endIndex = this.config.pagination ? startIndex + this.config.pageSize : this.filteredData.length;
+            pageData = this.filteredData.slice(startIndex, endIndex);
+        }
 
         tbody.innerHTML = '';
         
@@ -552,7 +571,7 @@ class QMGrid {
                         } else {
                             cellValue = new Intl.NumberFormat('en-US', {
                                 style: 'currency',
-                                currency: 'USD'
+                                currency: 'GHS'
                             }).format(numValue);
                         }
                     } catch (error) {
@@ -793,7 +812,19 @@ class QMGrid {
         // Pagination
         if (this.config.pagination) {
             const paginationHandler = (e) => {
-                const totalPages = Math.ceil(this.filteredData.length / this.config.pageSize);
+                const totalPages = this.config.serverSide 
+                    ? Math.ceil(this.totalRecords / this.config.pageSize)
+                    : Math.ceil(this.filteredData.length / this.config.pageSize);
+                
+                // Debug logging for server-side
+                if (this.config.serverSide && e.target.classList.contains('page-number')) {
+                    console.log('Server-side pagination:', {
+                        totalRecords: this.totalRecords,
+                        pageSize: this.config.pageSize,
+                        totalPages: totalPages,
+                        clickedPage: parseInt(e.target.dataset.page)
+                    });
+                }
                 
                 if (e.target.classList.contains('first-page')) {
                     this.goToPage(1);
@@ -807,6 +838,8 @@ class QMGrid {
                     const page = parseInt(e.target.dataset.page);
                     if (!isNaN(page) && page >= 1 && page <= totalPages) {
                         this.goToPage(page);
+                    } else {
+                        console.warn('Invalid page number:', page, 'Total pages:', totalPages);
                     }
                 }
             };
@@ -1234,6 +1267,14 @@ class QMGrid {
             this.filteredData = [...data];
             this.totalRecords = typeof total === 'number' ? total : data.length;
             this.retryCount = 0; // Reset retry count on success
+            
+            // Debug logging for server-side data loading
+            console.log('Server data loaded:', {
+                dataLength: data.length,
+                totalRecords: this.totalRecords,
+                currentPage: this.currentPage,
+                pageSize: this.config.pageSize
+            });
             
             this.render();
             this.emit(EVENTS.SERVER_DATA_LOADED, { 
