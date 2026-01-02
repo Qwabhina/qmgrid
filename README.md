@@ -13,6 +13,7 @@ This library has been significantly enhanced with:
 - ✅ **Developer Experience** - JSDoc documentation and method chaining
 - ✅ **Code Quality** - Constants, validation, and proper cleanup
 - ✅ **Type Safety** - Enhanced TypeScript definitions
+- 🆕 **Server-Side Processing** - Native support for server-side pagination, search, and sorting
 
 *See [IMPROVEMENTS.md](IMPROVEMENTS.md) for detailed information about all enhancements.*
 
@@ -23,6 +24,7 @@ This library has been significantly enhanced with:
 - **Search & Filter** - Built-in search functionality with debouncing
 - **Sorting** - Click column headers to sort (with validation)
 - **Pagination** - Smart pagination with configurable page sizes
+- **Server-Side Processing** - Native support for server-side operations
 - **Row Selection** - Single or multiple row selection
 - **Customizable** - Extensive styling options and custom renderers
 - **Dark Mode** - Automatic dark theme support
@@ -51,6 +53,7 @@ This library has been significantly enhanced with:
 ### 3. Initialize the table
 
 ```javascript
+// Client-side table
 const table = new QMGrid('#my-table', {
     data: [
         { id: 1, name: 'John Doe', email: 'john@example.com', age: 28 },
@@ -63,6 +66,21 @@ const table = new QMGrid('#my-table', {
         { key: 'email', title: 'Email' },
         { key: 'age', title: 'Age' }
     ]
+});
+
+// Server-side table
+const serverTable = new QMGrid('#server-table', {
+    columns: [
+        { key: 'id', title: 'ID' },
+        { key: 'name', title: 'Name' },
+        { key: 'email', title: 'Email' },
+        { key: 'age', title: 'Age' }
+    ],
+    serverSide: true,
+    ajax: {
+        url: '/api/data',
+        method: 'POST'
+    }
 });
 ```
 
@@ -81,6 +99,20 @@ const table = new QMGrid('#my-table', {
 | `selectable` | Boolean | `false` | Enable row selection |
 | `multiSelect` | Boolean | `false` | Allow multiple row selection |
 | `exportable` | Boolean | `true` | Enable export functionality |
+| `serverSide` | Boolean | `false` | Enable server-side processing |
+
+### Server-Side Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `ajax.url` | String | `null` | Server endpoint URL |
+| `ajax.method` | String | `'GET'` | HTTP method ('GET', 'POST', 'PUT') |
+| `ajax.headers` | Object | `{}` | Request headers |
+| `ajax.timeout` | Number | `30000` | Request timeout in milliseconds |
+| `ajax.data` | Function | `null` | Transform request parameters |
+| `serverResponse.data` | String | `'data'` | Path to data array in response |
+| `serverResponse.totalRecords` | String | `'total'` | Path to total count in response |
+| `serverResponse.error` | String | `'error'` | Path to error message in response |
 
 ### Styling Options
 
@@ -157,6 +189,7 @@ table.clearSelection();            // Clear all selections
 ```javascript
 table.showLoading();           // Show loading overlay
 table.hideLoading();           // Hide loading overlay
+table.refresh();               // Refresh data (server-side or client-side)
 table.destroy();               // Clean up and remove table
 ```
 
@@ -244,6 +277,188 @@ The library automatically supports:
 - **Screen reader support** with ARIA labels
 - **Focus indicators** for better usability
 
+## 🖥️ Server-Side Processing
+
+QMGrid v2.0+ includes native server-side processing support for handling large datasets efficiently.
+
+### Basic Server-Side Setup
+
+```javascript
+const table = new QMGrid('#server-table', {
+    columns: [
+        { key: 'id', title: 'ID' },
+        { key: 'name', title: 'Name' },
+        { key: 'email', title: 'Email' }
+    ],
+    serverSide: true,
+    ajax: {
+        url: '/api/data',
+        method: 'POST'
+    }
+});
+```
+
+### Advanced Server-Side Configuration
+
+```javascript
+const table = new QMGrid('#advanced-server-table', {
+    columns: columns,
+    serverSide: true,
+    ajax: {
+        url: '/api/employees',
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + authToken,
+            'Content-Type': 'application/json'
+        },
+        timeout: 15000,
+        retryAttempts: 3,
+        retryDelay: 1000,
+        data: function(params) {
+            // Transform request parameters
+            return {
+                page: params.page,
+                size: params.pageSize,
+                search: params.search,
+                sort: params.sortBy,
+                direction: params.sortDir,
+                filters: getActiveFilters()
+            };
+        },
+        beforeSend: function(data, params) {
+            console.log('Sending request:', data);
+            return true; // Return false to cancel request
+        },
+        complete: function() {
+            console.log('Request completed');
+        },
+        error: function(error, page, search) {
+            console.error('Request failed:', error);
+            showErrorNotification(error.message);
+        }
+    },
+    serverResponse: {
+        data: 'items',           // Path to data array
+        totalRecords: 'totalCount', // Path to total records
+        error: 'errorMessage',   // Path to error message
+        draw: 'requestId'        // Path to request identifier
+    }
+});
+```
+
+### Server Request Format
+
+QMGrid sends the following parameters to your server:
+
+```javascript
+{
+    page: 1,              // Current page number
+    pageSize: 10,         // Number of items per page
+    search: "john",       // Search term
+    sortBy: "name",       // Column to sort by
+    sortDir: "asc",       // Sort direction
+    draw: 123             // Request identifier
+}
+```
+
+### Expected Server Response Format
+
+Your server should return data in this format:
+
+```javascript
+{
+    data: [
+        {
+            id: 1,
+            name: "John Doe",
+            email: "john@example.com"
+        }
+        // ... more records
+    ],
+    total: 1250,          // Total number of records
+    draw: 123,            // Echo the request identifier
+    error: null           // Error message if any
+}
+```
+
+### Server-Side Events
+
+```javascript
+// Listen to server-side specific events
+table.on('serverRequestStart', (data) => {
+    console.log('Loading data from server...');
+});
+
+table.on('serverDataLoaded', (data) => {
+    console.log(`Loaded ${data.data.length} of ${data.total} records`);
+});
+
+table.on('serverError', (data) => {
+    console.error('Server error:', data.error);
+    showErrorMessage(data.error);
+});
+```
+
+### Server-Side Best Practices
+
+1. **Implement proper error handling** on your server
+2. **Use request identifiers** (draw parameter) to handle concurrent requests
+3. **Implement request timeout** and retry logic
+4. **Validate and sanitize** search and sort parameters
+5. **Use database indexing** for optimal performance
+6. **Implement caching** where appropriate
+
+### Example Server Implementation (Node.js/Express)
+
+```javascript
+app.post('/api/employees', async (req, res) => {
+    try {
+        const { page, pageSize, search, sortBy, sortDir, draw } = req.body;
+        
+        // Build database query
+        let query = Employee.find();
+        
+        // Apply search filter
+        if (search) {
+            query = query.where({
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            });
+        }
+        
+        // Apply sorting
+        if (sortBy) {
+            const sortOrder = sortDir === 'desc' ? -1 : 1;
+            query = query.sort({ [sortBy]: sortOrder });
+        }
+        
+        // Get total count
+        const total = await Employee.countDocuments(query.getQuery());
+        
+        // Apply pagination
+        const skip = (page - 1) * pageSize;
+        const data = await query.skip(skip).limit(pageSize);
+        
+        res.json({
+            data,
+            total,
+            draw,
+            error: null
+        });
+        
+    } catch (error) {
+        res.status(500).json({
+            data: [],
+            total: 0,
+            draw: req.body.draw,
+            error: error.message
+        });
+    }
+});
+```
+
 ## 🚀 Performance Features
 
 - **Debounced search** (300ms delay, configurable)
@@ -261,10 +476,12 @@ The library automatically supports:
 
 ## 📄 Files Included
 
-- `qmgrid.js` - Main library (ES6 class)
+- `qmgrid.js` - Main library (ES6 class) with server-side support
 - `qmgrid.css` - Complete styling with responsive design
-- `qmgrid.d.ts` - TypeScript definitions
+- `qmgrid.d.ts` - TypeScript definitions with server-side types
 - `index.html` - Interactive demo with examples
+- `server-side-demo.html` - Server-side processing demonstration
+- `export-demo.html` - Export functionality showcase
 - `README.md` - This documentation
 - `IMPROVEMENTS.md` - Detailed improvement documentation
 
@@ -504,35 +721,31 @@ columns: [
 ### Server-Side Data Loading
 
 ```javascript
+// Server-side table with automatic data loading
 const table = new QMGrid('#table', {
     columns: columns,
+    serverSide: true,
+    ajax: {
+        url: '/api/data',
+        method: 'POST'
+    },
     pagination: true,
     pageSize: 20
 });
 
-// Load data from server
-async function loadData(page = 1, search = '') {
-    table.showLoading();
-    
-    try {
-        const response = await fetch(`/api/data?page=${page}&search=${search}`);
-        const data = await response.json();
-        table.setData(data.rows);
-    } catch (error) {
-        console.error('Failed to load data:', error);
-    } finally {
-        table.hideLoading();
-    }
-}
+// The table automatically handles:
+// - Initial data loading
+// - Pagination requests
+// - Search requests
+// - Sort requests
+// - Error handling and retries
 
-// Listen for page changes
-table.on('pageChange', (data) => {
-    loadData(data.page);
-});
+// Manual refresh
+table.refresh();
 
-// Listen for search
-table.on('search', (data) => {
-    loadData(1, data.term);
+// Listen for server events
+table.on('serverDataLoaded', (data) => {
+    console.log(`Loaded ${data.data.length} records`);
 });
 ```
 

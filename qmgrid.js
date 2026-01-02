@@ -3,9 +3,10 @@
  * 
  * @fileoverview QMGrid is a comprehensive data table solution built with vanilla JavaScript.
  * It provides advanced features including sorting, filtering, pagination, row selection,
- * and comprehensive export functionality (CSV, Excel, PDF, Print) with zero dependencies.
+ * comprehensive export functionality (CSV, Excel, PDF, Print), and native server-side processing
+ * support with zero dependencies.
  * 
- * @version 1.2.0
+ * @version 2.0.0
  * @author Qwabhina McFynn
  * @license MIT
  * @since 1.0.0
@@ -18,6 +19,17 @@
  *         { key: 'name', title: 'Name' },
  *         { key: 'email', title: 'Email' }
  *     ]
+ * });
+ * 
+ * @example
+ * // Server-side processing
+ * const grid = new QMGrid('#server-table', {
+ *     columns: myColumns,
+ *     serverSide: true,
+ *     ajax: {
+ *         url: '/api/data',
+ *         method: 'POST'
+ *     }
  * });
  * 
  * @example
@@ -44,7 +56,13 @@ const DEFAULTS = {
     /** @type {number} Number of pages around current page in pagination */
     PAGINATION_DELTA: 2,
     /** @type {number} Maximum visible page numbers in pagination */
-    MAX_VISIBLE_PAGES: 7
+    MAX_VISIBLE_PAGES: 7,
+    /** @type {number} Server request timeout in milliseconds */
+    SERVER_TIMEOUT: 30000,
+    /** @type {number} Maximum retry attempts for failed requests */
+    MAX_RETRY_ATTEMPTS: 3,
+    /** @type {number} Retry delay in milliseconds */
+    RETRY_DELAY: 1000
 };
 
 /**
@@ -98,7 +116,15 @@ const EVENTS = {
     /** @type {string} Fired when row is updated */
     ROW_UPDATE: 'rowUpdate',
     /** @type {string} Fired when data is exported */
-    EXPORT: 'export'
+    EXPORT: 'export',
+    /** @type {string} Fired when server request starts */
+    SERVER_REQUEST_START: 'serverRequestStart',
+    /** @type {string} Fired when server request completes */
+    SERVER_REQUEST_END: 'serverRequestEnd',
+    /** @type {string} Fired when server request fails */
+    SERVER_ERROR: 'serverError',
+    /** @type {string} Fired when server data is loaded */
+    SERVER_DATA_LOADED: 'serverDataLoaded'
 };
 
 /**
@@ -122,11 +148,11 @@ const EXPORT_FORMATS = {
  * 
  * @class QMGrid
  * @classdesc A comprehensive data table solution with advanced features including
- * sorting, filtering, pagination, row selection, and export functionality.
- * Built with vanilla JavaScript and zero dependencies.
+ * sorting, filtering, pagination, row selection, export functionality, and native
+ * server-side processing support. Built with vanilla JavaScript and zero dependencies.
  * 
  * @author Qwabhina McFynn
- * @version 1.2.0
+ * @version 2.0.0
  * @since 1.0.0
  */
 class QMGrid {
@@ -174,6 +200,32 @@ class QMGrid {
      *     }
      * });
      * 
+     * @example
+     * // Advanced initialization with server-side processing
+     * const grid = new QMGrid('#server-grid', {
+     *     columns: myColumns,
+     *     serverSide: true,
+     *     ajax: {
+     *         url: '/api/data',
+     *         method: 'POST',
+     *         headers: { 'Authorization': 'Bearer token' },
+     *         data: function(params) {
+     *             return {
+     *                 page: params.page,
+     *                 size: params.pageSize,
+     *                 search: params.search,
+     *                 sort: params.sortBy,
+     *                 direction: params.sortDir
+     *             };
+     *         }
+     *     },
+     *     serverResponse: {
+     *         data: 'items',
+     *         totalRecords: 'totalCount',
+     *         error: 'errorMessage'
+     *     }
+     * });
+     * 
      * @since 1.0.0
      */
     constructor(selector, options = {}) {
@@ -205,6 +257,26 @@ class QMGrid {
             loading: false,
             emptyMessage: 'No data available',
             exportable: true,
+            // Server-side processing configuration
+            serverSide: false,
+            ajax: {
+                url: null,
+                method: 'GET',
+                headers: {},
+                timeout: DEFAULTS.SERVER_TIMEOUT,
+                retryAttempts: DEFAULTS.MAX_RETRY_ATTEMPTS,
+                retryDelay: DEFAULTS.RETRY_DELAY,
+                data: null, // Function to transform request parameters
+                beforeSend: null, // Function called before request
+                complete: null, // Function called after request (success or error)
+                error: null // Function called on request error
+            },
+            serverResponse: {
+                data: 'data', // Path to data array in response
+                totalRecords: 'total', // Path to total records count
+                error: 'error', // Path to error message
+                draw: 'draw' // Path to request identifier (optional)
+            },
             exportOptions: {
                 filename: 'qmgrid-export',
                 includeHeaders: true,
@@ -249,15 +321,42 @@ class QMGrid {
         this.searchTimeout = null;
         this.eventListeners = new Map();
         this.events = {};
+        
+        // Server-side state
+        this.totalRecords = 0;
+        this.isLoading = false;
+        this.currentRequest = null;
+        this.requestId = 0;
+        this.retryCount = 0;
 
         this.init();
     }
 
     init() {
-        this.originalData = [...this.config.data];
-        this.filteredData = [...this.config.data];
+        // Validate server-side configuration
+        if (this.config.serverSide) {
+            if (!this.config.ajax.url) {
+                throw new Error('Server-side processing enabled but no URL provided in ajax.url');
+            }
+            // For server-side, we don't initialize with data
+            this.originalData = [];
+            this.filteredData = [];
+            this.totalRecords = 0;
+        } else {
+            // Client-side initialization
+            this.originalData = [...this.config.data];
+            this.filteredData = [...this.config.data];
+        }
+        
         this.createStructure();
-        this.render();
+        
+        if (this.config.serverSide) {
+            // Load initial server data
+            this.loadServerData();
+        } else {
+            this.render();
+        }
+        
         this.attachEvents();
     }
 
@@ -509,7 +608,10 @@ class QMGrid {
     }
 
     renderPagination() {
-        const totalPages = Math.ceil(this.filteredData.length / this.config.pageSize);
+        const totalPages = this.config.serverSide 
+            ? Math.ceil(this.totalRecords / this.config.pageSize)
+            : Math.ceil(this.filteredData.length / this.config.pageSize);
+            
         const paginationContainer = this.container.querySelector('.qmgrid-pagination');
         
         if (!paginationContainer) return;
@@ -587,26 +689,49 @@ class QMGrid {
         const infoContainer = this.container.querySelector('.qmgrid-info');
         if (!infoContainer) return;
         
-        const start = this.filteredData.length === 0 ? 0 : (this.currentPage - 1) * this.config.pageSize + 1;
-        const end = Math.min(this.currentPage * this.config.pageSize, this.filteredData.length);
-        const total = this.filteredData.length;
-        const max = this.originalData.length;
+        if (this.config.serverSide) {
+            const start = this.totalRecords === 0 ? 0 : (this.currentPage - 1) * this.config.pageSize + 1;
+            const end = Math.min(this.currentPage * this.config.pageSize, this.totalRecords);
+            const total = this.totalRecords;
 
-        let infoText;
-        if (total === 0) {
-            infoText = this.config.language.infoEmpty;
-        } else {
-            infoText = this.config.language.info
-                .replace('_START_', start)
-                .replace('_END_', end)
-                .replace('_TOTAL_', total);
-            
-            if (total !== max) {
-                infoText += ' ' + this.config.language.infoFiltered.replace('_MAX_', max);
+            let infoText;
+            if (total === 0) {
+                infoText = this.config.language.infoEmpty;
+            } else {
+                infoText = this.config.language.info
+                    .replace('_START_', start)
+                    .replace('_END_', end)
+                    .replace('_TOTAL_', total);
+                
+                if (this.searchTerm) {
+                    infoText += ' ' + this.config.language.infoFiltered.replace('_MAX_', total);
+                }
             }
-        }
 
-        infoContainer.textContent = infoText;
+            infoContainer.textContent = infoText;
+        } else {
+            // Client-side info rendering (existing logic)
+            const start = this.filteredData.length === 0 ? 0 : (this.currentPage - 1) * this.config.pageSize + 1;
+            const end = Math.min(this.currentPage * this.config.pageSize, this.filteredData.length);
+            const total = this.filteredData.length;
+            const max = this.originalData.length;
+
+            let infoText;
+            if (total === 0) {
+                infoText = this.config.language.infoEmpty;
+            } else {
+                infoText = this.config.language.info
+                    .replace('_START_', start)
+                    .replace('_END_', end)
+                    .replace('_TOTAL_', total);
+                
+                if (total !== max) {
+                    infoText += ' ' + this.config.language.infoFiltered.replace('_MAX_', max);
+                }
+            }
+
+            infoContainer.textContent = infoText;
+        }
     }
 
     attachEvents() {
@@ -734,9 +859,16 @@ class QMGrid {
         }
         
         this.searchTerm = term.toLowerCase();
-        this.applyFilters();
-        this.currentPage = 1;
-        this.render();
+        
+        if (this.config.serverSide) {
+            this.currentPage = 1; // Reset to first page on search
+            this.loadServerData();
+        } else {
+            this.applyFilters();
+            this.currentPage = 1;
+            this.render();
+        }
+        
         this.emit(EVENTS.SEARCH, { term });
         return this;
     }
@@ -757,6 +889,12 @@ class QMGrid {
             throw new Error('Data must be an array');
         }
         
+        if (this.config.serverSide) {
+            console.warn('setData() called with server-side processing enabled. This will switch to client-side mode for this data.');
+            // Temporarily switch to client-side for this data
+            this.config.serverSide = false;
+        }
+        
         this.originalData = [...data];
         this.config.data = data;
         this.applyFilters();
@@ -772,6 +910,11 @@ class QMGrid {
             throw new Error('Row must be an object');
         }
         
+        if (this.config.serverSide) {
+            console.warn('addRow() not supported in server-side mode. Use server API to add data.');
+            return this;
+        }
+        
         this.originalData.push(row);
         this.config.data.push(row);
         this.applyFilters();
@@ -783,6 +926,11 @@ class QMGrid {
     removeRow(index) {
         if (typeof index !== 'number' || index < 0 || index >= this.originalData.length) {
             console.warn(`Invalid row index: ${index}`);
+            return this;
+        }
+        
+        if (this.config.serverSide) {
+            console.warn('removeRow() not supported in server-side mode. Use server API to remove data.');
             return this;
         }
         
@@ -815,6 +963,11 @@ class QMGrid {
         
         if (!newData || typeof newData !== 'object') {
             throw new Error('New data must be an object');
+        }
+        
+        if (this.config.serverSide) {
+            console.warn('updateRow() not supported in server-side mode. Use server API to update data.');
+            return this;
         }
         
         this.originalData[index] = { ...this.originalData[index], ...newData };
@@ -850,28 +1003,42 @@ class QMGrid {
             this.sortDirection = direction || 'asc';
         }
 
-        this.filteredData.sort((a, b) => {
-            const aVal = this.getCellValue(a, column);
-            const bVal = this.getCellValue(b, column);
-            
-            let result = 0;
-            if (aVal < bVal) result = -1;
-            else if (aVal > bVal) result = 1;
-            
-            return this.sortDirection === 'desc' ? -result : result;
-        });
+        if (this.config.serverSide) {
+            this.currentPage = 1; // Reset to first page on sort
+            this.loadServerData();
+        } else {
+            this.filteredData.sort((a, b) => {
+                const aVal = this.getCellValue(a, column);
+                const bVal = this.getCellValue(b, column);
+                
+                let result = 0;
+                if (aVal < bVal) result = -1;
+                else if (aVal > bVal) result = 1;
+                
+                return this.sortDirection === 'desc' ? -result : result;
+            });
+            this.render();
+        }
 
-        this.render();
         this.emit(EVENTS.SORT, { column, direction: this.sortDirection });
         return this;
     }
 
     goToPage(page) {
-        const totalPages = Math.ceil(this.filteredData.length / this.config.pageSize);
-        if (page >= 1 && page <= totalPages) {
-            this.currentPage = page;
-            this.render();
-            this.emit(EVENTS.PAGE_CHANGE, { page });
+        if (this.config.serverSide) {
+            const totalPages = Math.ceil(this.totalRecords / this.config.pageSize);
+            if (page >= 1 && page <= totalPages) {
+                this.currentPage = page;
+                this.loadServerData();
+                this.emit(EVENTS.PAGE_CHANGE, { page });
+            }
+        } else {
+            const totalPages = Math.ceil(this.filteredData.length / this.config.pageSize);
+            if (page >= 1 && page <= totalPages) {
+                this.currentPage = page;
+                this.render();
+                this.emit(EVENTS.PAGE_CHANGE, { page });
+            }
         }
         return this;
     }
@@ -884,7 +1051,13 @@ class QMGrid {
         
         this.config.pageSize = size;
         this.currentPage = 1;
-        this.render();
+        
+        if (this.config.serverSide) {
+            this.loadServerData();
+        } else {
+            this.render();
+        }
+        
         this.emit('pageSizeChange', { pageSize: size });
         return this;
     }
@@ -943,6 +1116,237 @@ class QMGrid {
         const wrapper = this.container.querySelector('.qmgrid-wrapper table');
         if (loadingDiv) loadingDiv.style.display = 'none';
         if (wrapper) wrapper.style.opacity = '1';
+        return this;
+    }
+
+    /**
+     * Load data from server
+     * @returns {Promise<void>}
+     * @private
+     */
+    async loadServerData() {
+        if (!this.config.ajax.url) {
+            console.error('Server-side processing enabled but no URL provided');
+            return;
+        }
+
+        // Cancel any existing request
+        if (this.currentRequest) {
+            this.currentRequest.abort();
+        }
+
+        // Prevent concurrent requests
+        if (this.isLoading) {
+            return;
+        }
+
+        this.isLoading = true;
+        this.showLoading();
+        this.emit(EVENTS.SERVER_REQUEST_START, { 
+            page: this.currentPage,
+            search: this.searchTerm,
+            sort: this.sortColumn,
+            direction: this.sortDirection
+        });
+
+        try {
+            const requestId = ++this.requestId;
+            const params = {
+                page: this.currentPage,
+                pageSize: this.config.pageSize,
+                search: this.searchTerm,
+                sortBy: this.sortColumn,
+                sortDir: this.sortDirection,
+                draw: requestId // Request identifier for tracking
+            };
+
+            // Allow custom data transformation
+            const requestData = this.config.ajax.data 
+                ? this.config.ajax.data(params) 
+                : params;
+
+            // Call beforeSend callback if provided
+            if (this.config.ajax.beforeSend && typeof this.config.ajax.beforeSend === 'function') {
+                const shouldContinue = this.config.ajax.beforeSend(requestData, params);
+                if (shouldContinue === false) {
+                    this.isLoading = false;
+                    this.hideLoading();
+                    return;
+                }
+            }
+
+            const controller = new AbortController();
+            this.currentRequest = controller;
+
+            const requestOptions = {
+                method: this.config.ajax.method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...this.config.ajax.headers
+                },
+                signal: controller.signal
+            };
+
+            // Set timeout
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, this.config.ajax.timeout);
+
+            if (this.config.ajax.method !== 'GET') {
+                requestOptions.body = JSON.stringify(requestData);
+            }
+
+            const url = this.config.ajax.method === 'GET' 
+                ? `${this.config.ajax.url}?${new URLSearchParams(this.flattenObject(requestData))}`
+                : this.config.ajax.url;
+
+            const response = await fetch(url, requestOptions);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            // Validate response draw/request ID if provided
+            const responseDraw = this.getNestedValue(result, this.config.serverResponse.draw);
+            if (responseDraw && responseDraw !== requestId) {
+                console.warn('Response draw ID mismatch, ignoring stale response');
+                return;
+            }
+
+            // Handle server response structure
+            const data = this.getNestedValue(result, this.config.serverResponse.data);
+            const total = this.getNestedValue(result, this.config.serverResponse.totalRecords);
+            const error = this.getNestedValue(result, this.config.serverResponse.error);
+
+            if (error) {
+                throw new Error(error);
+            }
+
+            if (!Array.isArray(data)) {
+                throw new Error('Server response data is not an array');
+            }
+
+            // Update internal state
+            this.originalData = [...data];
+            this.filteredData = [...data];
+            this.totalRecords = typeof total === 'number' ? total : data.length;
+            this.retryCount = 0; // Reset retry count on success
+            
+            this.render();
+            this.emit(EVENTS.SERVER_DATA_LOADED, { 
+                data, 
+                total: this.totalRecords,
+                page: this.currentPage,
+                search: this.searchTerm,
+                sort: this.sortColumn,
+                direction: this.sortDirection
+            });
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Request was cancelled');
+                return;
+            }
+
+            console.error('Failed to load server data:', error);
+            
+            // Retry logic
+            if (this.retryCount < this.config.ajax.retryAttempts) {
+                this.retryCount++;
+                console.log(`Retrying request (${this.retryCount}/${this.config.ajax.retryAttempts})...`);
+                
+                setTimeout(() => {
+                    this.loadServerData();
+                }, this.config.ajax.retryDelay * this.retryCount);
+                return;
+            }
+
+            // Call error callback if provided
+            if (this.config.ajax.error && typeof this.config.ajax.error === 'function') {
+                this.config.ajax.error(error, this.currentPage, this.searchTerm);
+            }
+
+            this.emit(EVENTS.SERVER_ERROR, { 
+                error: error.message,
+                page: this.currentPage,
+                search: this.searchTerm,
+                sort: this.sortColumn,
+                direction: this.sortDirection
+            });
+
+        } finally {
+            this.isLoading = false;
+            this.hideLoading();
+            this.currentRequest = null;
+            
+            // Call complete callback if provided
+            if (this.config.ajax.complete && typeof this.config.ajax.complete === 'function') {
+                this.config.ajax.complete();
+            }
+            
+            this.emit(EVENTS.SERVER_REQUEST_END, {
+                page: this.currentPage,
+                search: this.searchTerm,
+                sort: this.sortColumn,
+                direction: this.sortDirection
+            });
+        }
+    }
+
+    /**
+     * Helper method to get nested values from server response
+     * @param {Object} obj - Object to search in
+     * @param {string} path - Dot-separated path to value
+     * @returns {*} Value at path or null
+     * @private
+     */
+    getNestedValue(obj, path) {
+        if (!path || !obj) return obj;
+        return path.split('.').reduce((current, key) => {
+            return current && current[key] !== undefined ? current[key] : null;
+        }, obj);
+    }
+
+    /**
+     * Helper method to flatten nested objects for URL parameters
+     * @param {Object} obj - Object to flatten
+     * @param {string} prefix - Prefix for keys
+     * @returns {Object} Flattened object
+     * @private
+     */
+    flattenObject(obj, prefix = '') {
+        const flattened = {};
+        
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                const value = obj[key];
+                const newKey = prefix ? `${prefix}.${key}` : key;
+                
+                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+                    Object.assign(flattened, this.flattenObject(value, newKey));
+                } else {
+                    flattened[newKey] = value;
+                }
+            }
+        }
+        
+        return flattened;
+    }
+
+    /**
+     * Refresh server data (reload current page with current filters)
+     * @returns {Promise<QMGrid>} Returns this for method chaining
+     */
+    async refresh() {
+        if (this.config.serverSide) {
+            await this.loadServerData();
+        } else {
+            this.applyFilters();
+            this.render();
+        }
         return this;
     }
 
@@ -1403,6 +1807,12 @@ class QMGrid {
     }
 
     destroy() {
+        // Cancel any pending server request
+        if (this.currentRequest) {
+            this.currentRequest.abort();
+            this.currentRequest = null;
+        }
+        
         if (this.searchTimeout) {
             clearTimeout(this.searchTimeout);
             this.searchTimeout = null;
@@ -1419,6 +1829,9 @@ class QMGrid {
         this.filteredData = [];
         this.selectedRows.clear();
         this.events = {};
+        this.isLoading = false;
+        this.totalRecords = 0;
+        this.retryCount = 0;
         
         if (this.container) {
             this.container.innerHTML = '';

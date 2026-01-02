@@ -4,6 +4,66 @@ All notable changes to QMGrid will be documented in this file.
 
 **Author: Qwabhina McFynn**
 
+## [2.0.0] - 2025-01-02
+
+### 🆕 **Major New Feature: Native Server-Side Processing**
+
+#### ✅ **Complete Server-Side Implementation**
+- **Native server-side support** with automatic request handling
+- **Configurable AJAX settings** with custom headers, timeout, and retry logic
+- **Flexible request/response mapping** to work with any server API format
+- **Built-in error handling** with automatic retry and graceful degradation
+- **Request cancellation** to prevent race conditions and stale data
+- **Server-side events** for comprehensive request lifecycle monitoring
+
+#### ✅ **Enhanced Configuration Options**
+- **`serverSide: true`** - Enable server-side processing mode
+- **`ajax.url`** - Server endpoint URL configuration
+- **`ajax.method`** - HTTP method selection (GET, POST, PUT, PATCH)
+- **`ajax.headers`** - Custom request headers
+- **`ajax.timeout`** - Configurable request timeout (default: 30s)
+- **`ajax.retryAttempts`** - Automatic retry logic (default: 3 attempts)
+- **`ajax.data`** - Custom request parameter transformation function
+- **`serverResponse`** - Flexible response structure mapping
+
+#### ✅ **New Methods and Properties**
+- **`refresh()`** - Reload data from server or reapply client-side filters
+- **`totalRecords`** - Server-side total record count property
+- **`isLoading`** - Current loading state indicator
+- **Enhanced `loadServerData()`** - Internal server communication method
+
+#### ✅ **Enhanced Event System**
+- **`serverRequestStart`** - Fired when server request begins
+- **`serverRequestEnd`** - Fired when server request completes
+- **`serverDataLoaded`** - Fired when server data is successfully loaded
+- **`serverError`** - Fired when server request fails
+
+#### ✅ **Backward Compatibility Maintained**
+- **All existing client-side functionality preserved**
+- **No breaking changes** to existing APIs
+- **Automatic mode detection** - seamlessly works with both client and server data
+- **Graceful fallbacks** for mixed-mode scenarios
+
+#### ✅ **Enhanced Core Methods for Server-Side**
+- **`search()`** - Now supports both client-side and server-side search
+- **`sort()`** - Automatic server-side sorting with client-side fallback
+- **`goToPage()`** - Server-side pagination with proper total record handling
+- **`setPageSize()`** - Dynamic page size changes with automatic server reload
+
+#### ✅ **New Demo and Documentation**
+- **`server-side-demo.html`** - Comprehensive server-side processing demonstration
+- **Mock server implementation** for testing and development
+- **Real-time event logging** and status monitoring
+- **Enhanced TypeScript definitions** with complete server-side type safety
+
+#### ✅ **Performance and Reliability**
+- **Request deduplication** to prevent unnecessary server calls
+- **Intelligent request cancellation** for rapid user interactions
+- **Memory leak prevention** with proper cleanup of server requests
+- **Optimized DOM updates** for server-side data changes
+
+---
+
 ## [1.3.0] - 2024-12-31
 
 ### 🎉 **Major Rebranding: VanillaDataTable → QMGrid**

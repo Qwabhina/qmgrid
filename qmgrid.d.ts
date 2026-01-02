@@ -1,13 +1,73 @@
 /**
  * QMGrid TypeScript Definitions
  * 
- * @fileoverview Type definitions for QMGrid data table component
+ * @fileoverview Type definitions for QMGrid data table component with server-side processing support
  * @author Qwabhina McFynn
- * @version 1.2.0
+ * @version 2.0.0
  * @license MIT
  */
 
 declare module 'qmgrid' {
+  /**
+   * Server-side AJAX configuration interface
+   * @interface AjaxConfig
+   */
+  export interface AjaxConfig {
+    /** Server endpoint URL */
+    url: string;
+    /** HTTP method */
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+    /** Request headers */
+    headers?: Record<string, string>;
+    /** Request timeout in milliseconds */
+    timeout?: number;
+    /** Number of retry attempts on failure */
+    retryAttempts?: number;
+    /** Delay between retry attempts in milliseconds */
+    retryDelay?: number;
+    /** Function to transform request parameters */
+    data?: (params: ServerRequestParams) => any;
+    /** Function called before sending request */
+    beforeSend?: (data: any, params: ServerRequestParams) => boolean | void;
+    /** Function called after request completion */
+    complete?: () => void;
+    /** Function called on request error */
+    error?: (error: Error, page: number, search: string) => void;
+  }
+
+  /**
+   * Server response configuration interface
+   * @interface ServerResponseConfig
+   */
+  export interface ServerResponseConfig {
+    /** Path to data array in response */
+    data?: string;
+    /** Path to total records count in response */
+    totalRecords?: string;
+    /** Path to error message in response */
+    error?: string;
+    /** Path to request identifier in response */
+    draw?: string;
+  }
+
+  /**
+   * Server request parameters interface
+   * @interface ServerRequestParams
+   */
+  export interface ServerRequestParams {
+    /** Current page number */
+    page: number;
+    /** Number of items per page */
+    pageSize: number;
+    /** Search term */
+    search: string;
+    /** Sort column key */
+    sortBy: string | null;
+    /** Sort direction */
+    sortDir: 'asc' | 'desc';
+    /** Request identifier */
+    draw?: number;
+  }
   /**
    * Column configuration interface
    * @interface Column
@@ -64,6 +124,12 @@ declare module 'qmgrid' {
     loading?: boolean;
     /** Message when no data available */
     emptyMessage?: string;
+    /** Enable server-side processing */
+    serverSide?: boolean;
+    /** Server-side AJAX configuration */
+    ajax?: AjaxConfig;
+    /** Server response structure configuration */
+    serverResponse?: ServerResponseConfig;
     /** Enable export functionality */
     exportable?: boolean;
     /** Export configuration options */
@@ -153,6 +219,10 @@ declare module 'qmgrid' {
     filteredData: any[];
     /** Original data array */
     originalData: any[];
+    /** Server-side total records count */
+    totalRecords: number;
+    /** Current server request loading state */
+    isLoading: boolean;
 
     /**
      * Create a new QMGrid instance
@@ -271,6 +341,12 @@ declare module 'qmgrid' {
      * Hide loading overlay
      */
     hideLoading(): void;
+
+    /**
+     * Refresh data (reload from server or reapply filters)
+     * @returns Promise that resolves to this for method chaining
+     */
+    refresh(): Promise<QMGrid>;
 
     // Export functionality
     /**

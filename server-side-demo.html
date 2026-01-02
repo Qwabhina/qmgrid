@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMGrid - Server-Side Processing Demo</title>
+    <link rel="stylesheet" href="qmgrid.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .demo-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .demo-content {
+            padding: 20px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.15s ease;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #545b62; }
+        
+        .config-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .config-group {
+            margin-bottom: 15px;
+        }
+        
+        .config-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .config-group input,
+        .config-group select {
+            width: 100%;
+            max-width: 300px;
+            padding: 6px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .event-log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-timestamp {
+            color: #6c757d;
+            font-weight: bold;
+        }
+        
+        .log-event {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .log-error {
+            color: #dc3545;
+        }
+        
+        .log-success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QMGrid - Server-Side Processing Demo</h1>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Server Configuration & Status
+            </div>
+            <div class="demo-content">
+                <div class="config-panel">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div class="config-group">
+                            <label for="serverUrl">Server URL:</label>
+                            <input type="text" id="serverUrl" value="/api/employees" placeholder="Enter API endpoint">
+                        </div>
+                        <div class="config-group">
+                            <label for="requestMethod">HTTP Method:</label>
+                            <select id="requestMethod">
+                                <option value="GET">GET</option>
+                                <option value="POST" selected>POST</option>
+                                <option value="PUT">PUT</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label for="pageSize">Page Size:</label>
+                            <select id="pageSize">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label for="timeout">Timeout (ms):</label>
+                            <input type="number" id="timeout" value="10000" min="1000" max="60000">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="initializeTable()">Initialize Table</button>
+                    <button class="btn btn-success" onclick="refreshData()">Refresh Data</button>
+                    <button class="btn btn-info" onclick="simulateSlowResponse()">Simulate Slow Response</button>
+                    <button class="btn btn-warning" onclick="simulateError()">Simulate Error</button>
+                    <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+                    <div class="status-indicator" id="connectionStatus">
+                        <span>●</span> Not Connected
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Server-Side Data Table
+            </div>
+            <div class="demo-content">
+                <div id="server-table"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Mock Server Responses & Event Log
+            </div>
+            <div class="demo-content">
+                <div class="event-log" id="eventLog">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[Ready]</span> 
+                        <span class="log-event">Demo initialized</span> - Configure server settings and click "Initialize Table"
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="demo-header">
+                Server Response Format Examples
+            </div>
+            <div class="demo-content">
+                <h4>Expected Server Response Format:</h4>
+                <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>{
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "department": "Engineering",
+      "salary": 75000,
+      "status": "active"
+    }
+    // ... more records
+  ],
+  "total": 1250,
+  "draw": 1,
+  "error": null
+}</code></pre>
+
+                <h4>Request Parameters Sent to Server:</h4>
+                <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>{
+  "page": 1,
+  "pageSize": 10,
+  "search": "john",
+  "sortBy": "name",
+  "sortDir": "asc",
+  "draw": 1
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="qmgrid.js"></script>
+    <script>
+        let serverTable = null;
+        let mockData = [];
+        let requestCount = 0;
+
+        // Generate mock data
+        function generateMockData() {
+            const names = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson', 'Diana Davis', 'Edward Miller', 'Fiona Garcia', 'George Martinez', 'Helen Rodriguez'];
+            const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Design', 'Support', 'Management', 'Finance'];
+            const statuses = ['active', 'inactive', 'pending'];
+            
+            mockData = [];
+            for (let i = 1; i <= 1000; i++) {
+                mockData.push({
+                    id: i,
+                    name: names[Math.floor(Math.random() * names.length)] + ' ' + i,
+                    email: `user${i}@example.com`,
+                    department: departments[Math.floor(Math.random() * departments.length)],
+                    salary: Math.floor(Math.random() * 100000) + 40000,
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    joinDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString().split('T')[0]
+                });
+            }
+        }
+
+        // Mock server endpoint
+        function mockServerRequest(params) {
+            return new Promise((resolve, reject) => {
+                // Simulate network delay
+                const delay = params.slow ? 3000 : Math.random() * 500 + 200;
+                
+                setTimeout(() => {
+                    if (params.error) {
+                        reject(new Error('Simulated server error'));
+                        return;
+                    }
+
+                    let filteredData = [...mockData];
+                    
+                    // Apply search filter
+                    if (params.search) {
+                        const searchTerm = params.search.toLowerCase();
+                        filteredData = filteredData.filter(row => 
+                            Object.values(row).some(value => 
+                                value && value.toString().toLowerCase().includes(searchTerm)
+                            )
+                        );
+                    }
+                    
+                    // Apply sorting
+                    if (params.sortBy) {
+                        filteredData.sort((a, b) => {
+                            const aVal = a[params.sortBy];
+                            const bVal = b[params.sortBy];
+                            
+                            let result = 0;
+                            if (aVal < bVal) result = -1;
+                            else if (aVal > bVal) result = 1;
+                            
+                            return params.sortDir === 'desc' ? -result : result;
+                        });
+                    }
+                    
+                    // Apply pagination
+                    const start = (params.page - 1) * params.pageSize;
+                    const end = start + params.pageSize;
+                    const pageData = filteredData.slice(start, end);
+                    
+                    resolve({
+                        data: pageData,
+                        total: filteredData.length,
+                        draw: params.draw,
+                        error: null
+                    });
+                }, delay);
+            });
+        }
+
+        // Override fetch for demo purposes
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url.includes('/api/employees')) {
+                requestCount++;
+                logEvent('REQUEST', `Sending request #${requestCount} to ${url}`);
+                
+                let params;
+                if (options && options.method === 'POST') {
+                    params = JSON.parse(options.body);
+                } else {
+                    const urlParams = new URLSearchParams(url.split('?')[1]);
+                    params = Object.fromEntries(urlParams);
+                    params.page = parseInt(params.page) || 1;
+                    params.pageSize = parseInt(params.pageSize) || 10;
+                }
+                
+                return mockServerRequest(params)
+                    .then(data => {
+                        logEvent('SUCCESS', `Received ${data.data.length} records (${data.total} total)`);
+                        return {
+                            ok: true,
+                            json: () => Promise.resolve(data)
+                        };
+                    })
+                    .catch(error => {
+                        logEvent('ERROR', error.message);
+                        return {
+                            ok: false,
+                            status: 500,
+                            statusText: error.message,
+                            json: () => Promise.resolve({ error: error.message })
+                        };
+                    });
+            }
+            
+            return originalFetch.apply(this, arguments);
+        };
+
+        function initializeTable() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const method = document.getElementById('requestMethod').value;
+            const pageSize = parseInt(document.getElementById('pageSize').value);
+            const timeout = parseInt(document.getElementById('timeout').value);
+            
+            if (serverTable) {
+                serverTable.destroy();
+            }
+            
+            updateStatus('loading', 'Initializing...');
+            logEvent('INIT', 'Initializing server-side table');
+            
+            try {
+                serverTable = new QMGrid('#server-table', {
+                    columns: [
+                        { key: 'id', title: 'ID', width: '60px' },
+                        { key: 'name', title: 'Name' },
+                        { key: 'email', title: 'Email' },
+                        { key: 'department', title: 'Department' },
+                        { key: 'salary', title: 'Salary', type: 'currency' },
+                        { 
+                            key: 'status', 
+                            title: 'Status',
+                            render: (value) => {
+                                const colors = { active: '#28a745', inactive: '#dc3545', pending: '#ffc107' };
+                                const color = colors[value] || '#6c757d';
+                                return `<span style="color: ${color}; font-weight: bold;">${value.toUpperCase()}</span>`;
+                            }
+                        },
+                        { key: 'joinDate', title: 'Join Date', type: 'date' }
+                    ],
+                    serverSide: true,
+                    ajax: {
+                        url: serverUrl,
+                        method: method,
+                        timeout: timeout,
+                        headers: {
+                            'Authorization': 'Bearer demo-token',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        data: function(params) {
+                            return {
+                                page: params.page,
+                                pageSize: params.pageSize,
+                                search: params.search,
+                                sortBy: params.sortBy,
+                                sortDir: params.sortDir,
+                                draw: params.draw
+                            };
+                        },
+                        beforeSend: function(data, params) {
+                            logEvent('BEFORE_SEND', `Preparing request for page ${params.page}`);
+                            return true;
+                        },
+                        complete: function() {
+                            logEvent('COMPLETE', 'Request completed');
+                        },
+                        error: function(error, page, search) {
+                            logEvent('ERROR', `Request failed: ${error.message}`);
+                            updateStatus('error', 'Connection Error');
+                        }
+                    },
+                    serverResponse: {
+                        data: 'data',
+                        totalRecords: 'total',
+                        error: 'error',
+                        draw: 'draw'
+                    },
+                    pagination: true,
+                    pageSize: pageSize,
+                    sortable: true,
+                    searchable: true,
+                    selectable: true,
+                    multiSelect: true,
+                    exportable: true
+                });
+
+                // Event listeners
+                serverTable.on('serverRequestStart', (data) => {
+                    updateStatus('loading', 'Loading...');
+                    logEvent('REQUEST_START', `Loading page ${data.page}, search: "${data.search}", sort: ${data.sort} ${data.direction}`);
+                });
+
+                serverTable.on('serverDataLoaded', (data) => {
+                    updateStatus('connected', 'Connected');
+                    logEvent('DATA_LOADED', `Loaded ${data.data.length} records of ${data.total} total`);
+                });
+
+                serverTable.on('serverError', (data) => {
+                    updateStatus('error', 'Error');
+                    logEvent('SERVER_ERROR', data.error);
+                });
+
+                serverTable.on('search', (data) => {
+                    logEvent('SEARCH', `Search term: "${data.term}"`);
+                });
+
+                serverTable.on('sort', (data) => {
+                    logEvent('SORT', `Sort by ${data.column} ${data.direction}`);
+                });
+
+                serverTable.on('pageChange', (data) => {
+                    logEvent('PAGE_CHANGE', `Navigate to page ${data.page}`);
+                });
+
+                logEvent('SUCCESS', 'Table initialized successfully');
+                
+            } catch (error) {
+                logEvent('ERROR', `Failed to initialize table: ${error.message}`);
+                updateStatus('error', 'Initialization Error');
+            }
+        }
+
+        function refreshData() {
+            if (serverTable) {
+                logEvent('REFRESH', 'Manually refreshing data');
+                serverTable.refresh();
+            }
+        }
+
+        function simulateSlowResponse() {
+            if (serverTable) {
+                logEvent('SIMULATE', 'Simulating slow server response');
+                // Add slow flag to next request
+                const originalData = serverTable.config.ajax.data;
+                serverTable.config.ajax.data = function(params) {
+                    const data = originalData ? originalData(params) : params;
+                    data.slow = true;
+                    return data;
+                };
+                serverTable.refresh().then(() => {
+                    // Restore original data function
+                    serverTable.config.ajax.data = originalData;
+                });
+            }
+        }
+
+        function simulateError() {
+            if (serverTable) {
+                logEvent('SIMULATE', 'Simulating server error');
+                // Add error flag to next request
+                const originalData = serverTable.config.ajax.data;
+                serverTable.config.ajax.data = function(params) {
+                    const data = originalData ? originalData(params) : params;
+                    data.error = true;
+                    return data;
+                };
+                serverTable.refresh().then(() => {
+                    // Restore original data function
+                    serverTable.config.ajax.data = originalData;
+                });
+            }
+        }
+
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = `status-indicator status-${type}`;
+            statusEl.innerHTML = `<span>●</span> ${message}`;
+        }
+
+        function logEvent(type, message) {
+            const logEl = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let typeClass = '';
+            if (type.includes('ERROR')) typeClass = 'log-error';
+            else if (type.includes('SUCCESS') || type.includes('DATA_LOADED')) typeClass = 'log-success';
+            
+            entry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span> 
+                <span class="log-event ${typeClass}">${type}</span> - ${message}
+            `;
+            
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            const logEl = document.getElementById('eventLog');
+            logEl.innerHTML = '<div class="log-entry"><span class="log-timestamp">[Cleared]</span> <span class="log-event">Event log cleared</span></div>';
+        }
+
+        // Initialize mock data
+        generateMockData();
+        logEvent('INIT', `Generated ${mockData.length} mock records for demo`);
+    </script>
+</body>
+</html>

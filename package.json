@@ -1,7 +1,7 @@
 {
   "name": "qmgrid",
-  "version": "1.3.0",
-  "description": "QMGrid - A lightweight, feature-rich data table library built with vanilla JavaScript. Enhanced with improved error handling, accessibility, developer experience, and comprehensive export functionality (CSV, Excel, PDF, Print).",
+  "version": "2.0.0",
+  "description": "QMGrid - A lightweight, feature-rich data table library with native server-side processing support. Built with vanilla JavaScript, zero dependencies. Enhanced with improved error handling, accessibility, developer experience, and comprehensive export functionality (CSV, Excel, PDF, Print).",
   "main": "qmgrid.js",
   "style": "qmgrid.css",
   "types": "qmgrid.d.ts",
@@ -10,7 +10,8 @@
     "qmgrid.css",
     "qmgrid.d.ts",
     "README.md",
-    "IMPROVEMENTS.md"
+    "IMPROVEMENTS.md",
+    "server-side-demo.html"
   ],
   "scripts": {
     "demo": "echo \"Open index.html in your browser to see the demo\"",
@@ -38,7 +39,9 @@
     "csv",
     "excel",
     "pdf",
-    "print"
+    "    "server-side",
+    "ajax",
+    "api","
   ],
   "author": "Qwabhina McFynn",
   "license": "MIT",

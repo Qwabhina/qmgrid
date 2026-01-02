@@ -4,6 +4,90 @@
 
 This document outlines all the improvements made to the QMGrid library, addressing both immediate and short-term fixes.
 
+## 🆕 Version 2.0.0 - Server-Side Processing (2025-01-02)
+
+### Major New Feature: Native Server-Side Processing
+
+#### ✅ **Complete Server-Side Architecture**
+QMGrid now includes native server-side processing support, allowing seamless handling of large datasets without loading all data into the browser.
+
+**Key Features:**
+- **Automatic request handling** with configurable AJAX settings
+- **Flexible parameter transformation** via custom data functions  
+- **Response structure mapping** to work with any API format
+- **Built-in retry logic** with exponential backoff
+- **Request cancellation** to prevent race conditions
+- **Comprehensive error handling** with graceful degradation
+
+#### ✅ **Enhanced Configuration System**
+```javascript
+// Server-side configuration
+const table = new QMGrid('#table', {
+    serverSide: true,
+    ajax: {
+        url: '/api/data',
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer token' },
+        timeout: 30000,
+        retryAttempts: 3,
+        data: function(params) {
+            return {
+                page: params.page,
+                size: params.pageSize,
+                search: params.search,
+                sort: params.sortBy,
+                direction: params.sortDir
+            };
+        }
+    },
+    serverResponse: {
+        data: 'items',
+        totalRecords: 'totalCount', 
+        error: 'errorMessage'
+    }
+});
+```
+
+#### ✅ **New Server-Side Methods and Properties**
+- **`loadServerData()`** - Internal method for server communication
+- **`refresh()`** - Reload data from server or reapply client-side filters
+- **`totalRecords`** - Server-side total record count property
+- **`isLoading`** - Current loading state indicator
+- **`getNestedValue()`** - Helper for response structure mapping
+- **`flattenObject()`** - Helper for URL parameter encoding
+
+#### ✅ **Enhanced Event System**
+New server-side specific events:
+- **`serverRequestStart`** - Fired when server request begins
+- **`serverRequestEnd`** - Fired when server request completes  
+- **`serverDataLoaded`** - Fired when data is successfully loaded
+- **`serverError`** - Fired when server request fails
+
+#### ✅ **Smart Method Enhancement**
+All core methods now automatically detect processing mode:
+```javascript
+// Works for both client-side and server-side
+table.search('john');      // Triggers server request if serverSide: true
+table.sort('name', 'asc'); // Sends sort parameters to server
+table.goToPage(2);         // Requests specific page from server
+table.setPageSize(25);     // Updates page size and reloads from server
+```
+
+#### ✅ **Backward Compatibility Maintained**
+- **All existing client-side functionality preserved**
+- **No breaking changes** to existing APIs
+- **Automatic mode detection** between client and server processing
+- **Graceful fallbacks** for mixed scenarios
+
+#### ✅ **New Demo and Documentation**
+- **`server-side-demo.html`** - Interactive server-side demonstration
+- **`SERVER_SIDE_GUIDE.md`** - Comprehensive implementation guide
+- **Mock server implementation** for testing and development
+- **Real-time event logging** and status monitoring
+- **Server implementation examples** (Node.js, PHP, Python)
+
+---
+
 ## Immediate Fixes (High Priority) ✅
 
 ### 1. Input Validation and Error Handling
