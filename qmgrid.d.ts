@@ -3,7 +3,7 @@
  * 
  * @fileoverview Type definitions for QMGrid data table component with server-side processing support
  * @author Qwabhina McFynn
- * @version 2.0.1
+ * @version 2.1.0
  * @license MIT
  */
 

@@ -4,6 +4,80 @@ All notable changes to QMGrid will be documented in this file.
 
 **Author: Qwabhina McFynn**
 
+## [2.1.0] - 2025-01-04
+
+### 🎨 **Theme System Overhaul**
+
+#### ✅ **CSS Variables for Full Customization**
+- **Extracted all colors into CSS variables** for easy theming
+- **Background variables**: `--qmgrid-bg-primary`, `--qmgrid-bg-secondary`, `--qmgrid-bg-tertiary`, `--qmgrid-bg-hover`, `--qmgrid-bg-striped`, `--qmgrid-bg-selected`, `--qmgrid-bg-loading`
+- **Text variables**: `--qmgrid-text-primary`, `--qmgrid-text-secondary`, `--qmgrid-text-muted`, `--qmgrid-text-light`
+- **Border variables**: `--qmgrid-border-primary`, `--qmgrid-border-secondary`, `--qmgrid-border-focus`
+- **Accent variables**: `--qmgrid-accent-primary`, `--qmgrid-accent-hover`, `--qmgrid-accent-light`
+- **Shadow variables**: `--qmgrid-shadow-light`, `--qmgrid-shadow-medium`, `--qmgrid-shadow-dark`
+
+#### ✅ **Light Theme as Default**
+- **Removed automatic dark mode** based on system preferences
+- **Light theme is now always the default** regardless of user's system settings
+- **Predictable behavior** across all environments
+
+#### ✅ **Programmatic Theme Control**
+- **New `theme` config option**: Set initial theme ('light' or 'dark')
+- **New `setTheme(theme)` method**: Switch themes programmatically
+- **New `getTheme()` method**: Get current theme
+- **New `toggleTheme()` method**: Toggle between light and dark themes
+- **`.qmgrid-dark` CSS class**: Applied automatically when dark theme is active
+
+#### ✅ **TypeScript Support**
+- **Updated type definitions** with theme option in `QMGridConfig`
+- **Added method signatures** for `setTheme()`, `getTheme()`, and `toggleTheme()`
+- **Proper type safety** for theme values ('light' | 'dark')
+
+#### ✅ **New Documentation**
+- **`THEME_GUIDE.md`**: Comprehensive guide for theme customization
+- **`theme-demo.html`**: Interactive demo showcasing theme switching
+- **CSS variable reference** with all available customization options
+- **Custom theme examples** for creating branded themes
+
+### 📝 **Usage Examples**
+
+```javascript
+// Set initial theme
+const grid = new QMGrid('#table', {
+    data: myData,
+    columns: myColumns,
+    theme: 'dark' // or 'light' (default)
+});
+
+// Switch themes programmatically
+grid.setTheme('dark');
+grid.setTheme('light');
+
+// Toggle between themes
+grid.toggleTheme();
+
+// Get current theme
+const currentTheme = grid.getTheme(); // 'light' or 'dark'
+```
+
+### 🎨 **Custom Theme Example**
+
+```css
+/* Create a custom branded theme */
+.qmgrid-container.my-brand {
+    --qmgrid-accent-primary: #10b981;
+    --qmgrid-accent-hover: #059669;
+    --qmgrid-bg-selected: #d1fae5;
+}
+```
+
+### 🔄 **Migration Notes**
+- **No breaking changes** - existing code continues to work
+- **Dark mode users**: If you relied on automatic dark mode, you now need to explicitly set `theme: 'dark'` or detect system preference manually
+- **Custom CSS**: If you had custom dark mode overrides, consider using the new CSS variables instead
+
+---
+
 ## [2.0.0] - 2025-01-02
 
 ### 🆕 **Major New Feature: Native Server-Side Processing**
