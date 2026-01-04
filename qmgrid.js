@@ -6,7 +6,7 @@
  * comprehensive export functionality (CSV, Excel, PDF, Print), and native server-side processing
  * support with zero dependencies.
  * 
- * @version 2.0.0
+ * @version 2.0.1
  * @author Qwabhina McFynn
  * @license MIT
  * @since 1.0.0
