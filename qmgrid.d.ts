@@ -132,6 +132,8 @@ declare module 'qmgrid' {
     serverResponse?: ServerResponseConfig;
     /** Enable export functionality */
     exportable?: boolean;
+    /** Theme setting ('light' or 'dark') */
+    theme?: 'light' | 'dark';
     /** Export configuration options */
     exportOptions?: {
       /** Default export filename */
@@ -341,6 +343,24 @@ declare module 'qmgrid' {
      * Hide loading overlay
      */
     hideLoading(): void;
+
+    // Theme management
+    /**
+     * Set the theme for the grid
+     * @param theme Theme name ('light' or 'dark')
+     */
+    setTheme(theme: 'light' | 'dark'): void;
+    
+    /**
+     * Get the current theme
+     * @returns Current theme ('light' or 'dark')
+     */
+    getTheme(): 'light' | 'dark';
+    
+    /**
+     * Toggle between light and dark themes
+     */
+    toggleTheme(): void;
 
     /**
      * Refresh data (reload from server or reapply filters)

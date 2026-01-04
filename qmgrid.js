@@ -257,6 +257,7 @@ class QMGrid {
             loading: false,
             emptyMessage: 'No data available',
             exportable: true,
+            theme: 'light', // 'light' or 'dark'
             // Server-side processing configuration
             serverSide: false,
             ajax: {
@@ -362,6 +363,10 @@ class QMGrid {
 
     createStructure() {
         this.container.className = CSS_CLASSES.CONTAINER;
+        
+        // Initialize theme
+        this.setTheme(this.config.theme);
+        
         this.container.innerHTML = `
             <div class="qmgrid-header">
                 <div class="qmgrid-controls">
@@ -442,6 +447,44 @@ class QMGrid {
         if (this.config.hover) classes.push('table-hover');
         if (this.config.responsive) classes.push('table-responsive');
         return classes.join(' ');
+    }
+
+    /**
+     * Set the theme for the grid
+     * @param {string} theme - Theme name ('light' or 'dark')
+     * @public
+     */
+    setTheme(theme) {
+        if (theme !== 'light' && theme !== 'dark') {
+            console.warn(`QMGrid: Invalid theme '${theme}'. Using 'light' theme.`);
+            theme = 'light';
+        }
+        
+        this.config.theme = theme;
+        
+        if (theme === 'dark') {
+            this.container.classList.add('qmgrid-dark');
+        } else {
+            this.container.classList.remove('qmgrid-dark');
+        }
+    }
+
+    /**
+     * Get the current theme
+     * @returns {string} Current theme ('light' or 'dark')
+     * @public
+     */
+    getTheme() {
+        return this.config.theme;
+    }
+
+    /**
+     * Toggle between light and dark themes
+     * @public
+     */
+    toggleTheme() {
+        const newTheme = this.config.theme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
     }
 
     render() {
